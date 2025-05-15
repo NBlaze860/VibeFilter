@@ -1,5 +1,6 @@
 let postArr = [];
 let includeArr = [];
+let notIncludeArr = [];
 let senderTabId = null;
 const includeFilter = (arr, tabId) => {
   try {
@@ -28,6 +29,31 @@ const includeFilter = (arr, tabId) => {
   }
 };
 
+const notIncludeFilter = (arr, tabId) => {
+  try {
+    arr = arr.filter((p, index) => {
+      for (let i = 0; i < notIncludeArr.length; i++) {
+        if(p.text.includes(notIncludeArr[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+  );
+  try {
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, {
+          filtered: arr,
+        });
+      }
+    } catch (error) {
+      console.log("error in notIncludeFilter sendMessage: " + error);
+    }
+  } catch (error) {
+    console.log("error in notIncludeFilter" + error);
+  }
+};
+
 try {
   chrome.runtime.onMessage.addListener(function (
     request,
@@ -36,22 +62,33 @@ try {
   ) {
     senderTabId = sender.tab ? sender.tab.id : senderTabId;
     if (request.inc) {
-                                                                         // console.log(senderTabId);
+      // console.log(senderTabId);
       const temp = request.inc.toLowerCase();
       includeArr.push(temp);
       let tempArr = postArr;
       //console.log("1" ,tempArr);
       setTimeout(() => {
-                                                                           // console.log(senderTabId);
+        // console.log(senderTabId);
         tempArr = includeFilter(tempArr, senderTabId);
         //console.log("2" ,tempArr);
       }, 500);
-    } else if (request.arr) {
-                                                                         // console.log(senderTabId);
+    }
+    if (request.notInc) {
+      const temp = request.notInc.toLowerCase();
+      notIncludeArr.push(temp);
+      let tempArr = postArr;
+      tempArr = notIncludeFilter(tempArr, senderTabId);
+    }
+    if (request.eitherOr) {
+      console.log(request.eitherOr);
+    }
+    if (request.arr) {
+      // console.log(senderTabId);
       postArr = request.arr;
       let tempArr = postArr;
       console.log("3", tempArr);
       tempArr = includeFilter(tempArr, senderTabId);
+      tempArr = notIncludeFilter(tempArr, senderTabId);
       console.log("4", tempArr);
     }
     return false;
