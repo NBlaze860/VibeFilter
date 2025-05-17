@@ -15,15 +15,15 @@ const includeFilter = (arr, tabId) => {
       }
       return true;
     });
-    try {
-      if (tabId) {
-        chrome.tabs.sendMessage(tabId, {
-          filtered: arr,
-        });
-      }
-    } catch (error) {
-      console.log("error in includeFilter sendMessage: " + error);
-    }
+    // try {
+    //   if (tabId) {
+    //     chrome.tabs.sendMessage(tabId, {
+    //       filtered: arr,
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.log("error in includeFilter sendMessage: " + error);
+    // }
     return arr;
   } catch (error) {
     console.log("error in includeFilter function: " + error);
@@ -40,15 +40,16 @@ const notIncludeFilter = (arr, tabId) => {
       }
       return true;
     });
-    try {
-      if (tabId) {
-        chrome.tabs.sendMessage(tabId, {
-          filtered: arr,
-        });
-      }
-    } catch (error) {
-      console.log("error in notIncludeFilter sendMessage: " + error);
-    }
+    // try {
+    //   if (tabId) {
+    //     chrome.tabs.sendMessage(tabId, {
+    //       filtered: arr,
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.log("error in notIncludeFilter sendMessage: " + error);
+    // }
+    return arr;
   } catch (error) {
     console.log("error in notIncludeFilter" + error);
   }
@@ -65,15 +66,16 @@ const eitherOrFilter = (arr, tabId) => {
       }
       return bool;
     });
-    try {
-      if (tabId) {
-        chrome.tabs.sendMessage(tabId, {
-          filtered: arr,
-        });
-      }
-    } catch (error) {
-      console.log("error in eitheOrFilter sendMessage: " + error);
-    }
+    // try {
+    //   if (tabId) {
+    //     chrome.tabs.sendMessage(tabId, {
+    //       filtered: arr,
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.log("error in eitheOrFilter sendMessage: " + error);
+    // }
+    return arr;
   } catch (error) {
     console.log("error in eitherOrFilter: " + error);
   }
@@ -86,40 +88,47 @@ try {
     sendResponse
   ) {
     senderTabId = sender.tab ? sender.tab.id : senderTabId;
+    let tempArr = postArr;
     if (request.inc) {
       // console.log(senderTabId);
       const temp = request.inc.toLowerCase();
       includeArr.push(temp);
-      let tempArr = postArr;
-      //console.log("1" ,tempArr);
-      setTimeout(() => {
-        // console.log(senderTabId);
+      console.log("1" ,tempArr, postArr);
+     //    console.log(senderTabId);
         tempArr = includeFilter(tempArr, senderTabId);
-        //console.log("2" ,tempArr);
-      }, 500);
+        console.log("2" ,tempArr);
     }
     if (request.notInc) {
       let temp = request.notInc.toLowerCase();
       notIncludeArr.push(temp);
-      let tempArr = postArr;
       tempArr = notIncludeFilter(tempArr, senderTabId);
     }
     if (request.eitherOr) {
       let temp = request.eitherOr.toLowerCase();
       eitherOrArr.push(temp);
-      let tempArr = postArr;
+      console.log(tempArr, "11");
       tempArr = eitherOrFilter(tempArr, senderTabId);
+      console.log(tempArr, "22");
     }
     if (request.arr) {
-      // console.log(senderTabId);
+       console.log(senderTabId);
       postArr = request.arr;
-      let tempArr = postArr;
+       tempArr = postArr;
       console.log("3", tempArr);
       
       if(includeArr.length) tempArr = includeFilter(tempArr, senderTabId);
       if(notIncludeArr.length) tempArr = notIncludeFilter(tempArr, senderTabId);
       if(eitherOrArr.length) tempArr = eitherOrFilter(tempArr, senderTabId);
       console.log("4", tempArr);
+    }
+    try {
+      if (senderTabId && postArr.length) {
+        chrome.tabs.sendMessage(senderTabId, {
+          filtered: tempArr,
+        });
+      }
+    } catch (error) {
+      console.log("error in notIncludeFilter sendMessage: " + error);
     }
     return false;
   });
