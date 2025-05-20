@@ -93,35 +93,35 @@ try {
       // console.log(senderTabId);
       const temp = request.inc.toLowerCase();
       includeArr.push(temp);
-      console.log("1" ,tempArr, postArr);
-     //    console.log(senderTabId);
-        tempArr = includeFilter(tempArr, senderTabId);
-        console.log("2" ,tempArr);
+      console.log("1", tempArr, postArr);
+      //    console.log(senderTabId);
+      tempArr = includeFilter(tempArr, senderTabId);
+      console.log("include:", includeArr, tempArr);
     }
     if (request.notInc) {
       let temp = request.notInc.toLowerCase();
       notIncludeArr.push(temp);
       tempArr = notIncludeFilter(tempArr, senderTabId);
+      console.log("notInclude:", notIncludeArr, tempArr);
     }
     if (request.eitherOr) {
       let temp = request.eitherOr.toLowerCase();
       eitherOrArr.push(temp);
-      console.log(tempArr, "11");
       tempArr = eitherOrFilter(tempArr, senderTabId);
-      console.log(tempArr, "22");
+      console.log("either or:", eitherOrArr, tempArr);
     }
     if (request.arr) {
-       console.log(senderTabId);
+      console.log(senderTabId);
       postArr = request.arr;
-       tempArr = postArr;
-      console.log("3", tempArr);
-      
-      if(includeArr.length) tempArr = includeFilter(tempArr, senderTabId);
-      if(notIncludeArr.length) tempArr = notIncludeFilter(tempArr, senderTabId);
-      if(eitherOrArr.length) tempArr = eitherOrFilter(tempArr, senderTabId);
-      console.log("4", tempArr);
+      tempArr = postArr;
+      console.log("tempArr:", tempArr);
+
+      if (includeArr.length) tempArr = includeFilter(tempArr, senderTabId);
+      if (notIncludeArr.length) tempArr = notIncludeFilter(tempArr, senderTabId);
+      if (eitherOrArr.length) tempArr = eitherOrFilter(tempArr, senderTabId);
     }
     try {
+      console.log("final tempArr:", tempArr);
       if (senderTabId && postArr.length) {
         chrome.tabs.sendMessage(senderTabId, {
           filtered: tempArr,

@@ -57,19 +57,21 @@ const interval = setInterval(() => {
     const config = { childList: true };
 
     observer.observe(parent, config);
-    
-    chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-      console.log(filteredPosts);
+
+    chrome.runtime.onMessage.addListener(function (
+      request,
+      sender,
+      sendResponse
+    ) {
+      console.log("filtered posts:", filteredPosts);
       let arr = request.filtered;
-      console.log(arr);
       filteredPosts = arr;
       let i = 0;
-      let postArr = Array.from(posts); 
+      let postArr = Array.from(posts);
       //console.log(posts);
       try {
-        postArr = postArr.filter((post, index=0) => {
-          console.log("i->" + i + " index->" + index + (i>=arr.length || arr[i].index !== index))
-          if (i>=arr.length || arr[i].index !== index) {
+        postArr = postArr.filter((post, index = 0) => {
+          if (i >= arr.length || arr[i].index !== index) {
             posts[index].remove();
             return false;
           } else {
@@ -77,7 +79,8 @@ const interval = setInterval(() => {
             return true;
           }
         });
-      } catch(error) {
+        console.log("final posts: ", postArr);
+      } catch (error) {
         console.log("error in content script onMessage: " + error);
       }
       console.log(postArr);
@@ -86,4 +89,3 @@ const interval = setInterval(() => {
     console.log("Waiting for .scaffold-finite-scroll__content...");
   }
 }, 500); // Check every 500ms
-
