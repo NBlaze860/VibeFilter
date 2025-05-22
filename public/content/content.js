@@ -27,29 +27,44 @@ function textIncludesKeyword(rawText) {
 //   //   }
 //   // });
 // });
-
 const interval = setInterval(() => {
   const parent = document.querySelector(".scaffold-finite-scroll__content");
-
   if (parent) {
     console.log("Target element found:", parent);
     clearInterval(interval); // Stop checking once found
 
     const callback = (mutationList, observer) => {
-      setTimeout(() => {
-        posts = document.querySelectorAll("li.artdeco-card");
-        filteredPosts = [];
-        posts.forEach((post, i) => {
-          const p = {
-            index: i,
-            text: textIncludesKeyword(post.textContent),
-          };
-          filteredPosts.push(p);
-        });
-        chrome.runtime.sendMessage({
-          arr: filteredPosts,
-        });
-      }, "500");
+      const currentURL = window.location.href;
+      if (
+        currentURL
+          .toLowerCase()
+          .includes("https://www.linkedin.com/search/results/content/")
+      )
+        setTimeout(() => {
+          try {
+            const showMoreButton = document.querySelector(
+              ".scaffold-finite-scroll__load-button"
+            );
+            if (showMoreButton) {
+              console.log("Button found:", showMoreButton);
+              showMoreButton.click();
+            }
+          } catch (error) {
+            console.log("error while finding show more button: " + error);
+          }
+          posts = document.querySelectorAll("li.artdeco-card");
+          filteredPosts = [];
+          posts.forEach((post, i) => {
+            const p = {
+              index: i,
+              text: textIncludesKeyword(post.textContent),
+            };
+            filteredPosts.push(p);
+          });
+          chrome.runtime.sendMessage({
+            arr: filteredPosts,
+          });
+        }, "500");
     };
 
     observer = new MutationObserver(callback);

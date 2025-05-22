@@ -10,7 +10,7 @@
     },
     "content_scripts": [
       {
-        "matches": ["https://www.linkedin.com/search/results/content/*"],
+        "matches": ["<all_urls>"],
         "js": ["content/content.js"]
       }
     ],
@@ -20,7 +20,7 @@
       "scripting"
     ],
     "host_permissions": [
-      "https://www.linkedin.com/search/results/content/*"
+      "<all_urls>"
     ]
   }
   

@@ -89,24 +89,22 @@ try {
   ) {
     senderTabId = sender.tab ? sender.tab.id : senderTabId;
     let tempArr = postArr;
-    if (request.inc) {
-      // console.log(senderTabId);
-      const temp = request.inc.toLowerCase();
-      includeArr.push(temp);
+    if (request.include) {
+      let temp = request.include;
+      includeArr = temp;
       console.log("1", tempArr, postArr);
-      //    console.log(senderTabId);
       tempArr = includeFilter(tempArr, senderTabId);
       console.log("include:", includeArr, tempArr);
     }
-    if (request.notInc) {
-      let temp = request.notInc.toLowerCase();
-      notIncludeArr.push(temp);
+    if (request.notInclude) {
+      let temp = request.notInclude;
+      notIncludeArr = temp;
       tempArr = notIncludeFilter(tempArr, senderTabId);
       console.log("notInclude:", notIncludeArr, tempArr);
     }
     if (request.eitherOr) {
-      let temp = request.eitherOr.toLowerCase();
-      eitherOrArr.push(temp);
+      let temp = request.eitherOr;
+      eitherOrArr = temp;
       tempArr = eitherOrFilter(tempArr, senderTabId);
       console.log("either or:", eitherOrArr, tempArr);
     }
