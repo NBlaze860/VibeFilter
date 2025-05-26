@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
 function Popup() {
-  // State for input fields for adding new filters
+  //input fields for adding new filters
   const [includeInput, setIncludeInput] = useState('');
   const [notIncludeInput, setNotIncludeInput] = useState('');
   const [eitherOrInput, setEitherOrInput] = useState('');
 
-  // State for lists of active filters for each category
+  //lists of active filters for each category
   const [includeFilters, setIncludeFilters] = useState([]);
   const [notIncludeFilters, setNotIncludeFilters] = useState([]);
   const [eitherOrFilters, setEitherOrFilters] = useState([]);
 
-  // Effect to load filters from Chrome local storage when the component mounts.
-  // This ensures that previously added filters are displayed when the popup is opened.
-  useEffect(() => {
-    // Check if the Chrome API is available (important for development outside the extension environment)
+  useEffect(() => { //loads filters from Chrome local storage.
+    // Check if the Chrome API is available
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['includeFilters', 'notIncludeFilters', 'eitherOrFilters'], (result) => {
         if (result.includeFilters) {
@@ -28,7 +26,7 @@ function Popup() {
         }
       });
     }
-  }, []); // Empty dependency array means this effect runs only once on mount
+  }, []); // effect runs only once on initial render
 
   // Effect to save 'includeFilters' to Chrome local storage and send a message
   // to the background script whenever the 'includeFilters' state changes.
@@ -38,7 +36,7 @@ function Popup() {
       // Send the updated list of include filters to the background script
       chrome.runtime.sendMessage({ type: 'updateFilters', include: includeFilters });
     }
-  }, [includeFilters]); // This effect runs whenever 'includeFilters' state changes
+  }, [includeFilters]);
 
   // Effect to save 'notIncludeFilters' to Chrome local storage and send a message
   // to the background script whenever the 'notIncludeFilters' state changes.
@@ -48,7 +46,7 @@ function Popup() {
       // Send the updated list of not-include filters to the background script
       chrome.runtime.sendMessage({ type: 'updateFilters', notInclude: notIncludeFilters });
     }
-  }, [notIncludeFilters]); // This effect runs whenever 'notIncludeFilters' state changes
+  }, [notIncludeFilters]) // This effect runs whenever 'notIncludeFilters' state changes
 
   // Effect to save 'eitherOrFilters' to Chrome local storage and send a message
   // to the background script whenever the 'eitherOrFilters' state changes.
@@ -58,7 +56,7 @@ function Popup() {
       // Send the updated list of either-or filters to the background script
       chrome.runtime.sendMessage({ type: 'updateFilters', eitherOr: eitherOrFilters });
     }
-  }, [eitherOrFilters]); // This effect runs whenever 'eitherOrFilters' state changes
+  }, [eitherOrFilters]);
 
   /**
    * Adds a new filter to the specified filter list.
@@ -118,13 +116,13 @@ function Popup() {
     <div className="flex flex-wrap gap-2 mt-2">
       {filters.map((filter) => (
         <span
-          key={filter} // Using the filter string itself as the key because values are unique and stable
+          key={filter}
           className="flex items-center bg-gray-700 text-gray-300 text-sm px-3 py-1 rounded-lg shadow-sm max-w-full overflow-hidden whitespace-nowrap text-ellipsis transition-all duration-200 ease-in-out hover:bg-gray-600"
         >
           {filter.length>30 ? `${filter.slice(0,30)}...` : filter}
           <button
             onClick={() => {
-              // Dynamically determine which setFilters and currentFilters to use based on filterType
+              //determine which setFilters and currentFilters to use based on filterType
               let targetSetFilters, targetCurrentFilters;
               if (filterType === 'include') {
                 targetSetFilters = setIncludeFilters;
@@ -139,7 +137,7 @@ function Popup() {
               removeFilter(filter, targetSetFilters, targetCurrentFilters);
             }}
             className="ml-2 text-gray-500 hover:text-gray-300 focus:outline-none transition-colors duration-200 ease-in-out"
-            aria-label={`Remove ${filter}`} // Accessibility label for the remove button
+            aria-label={`Remove ${filter}`}
           >
             &times; {/* HTML entity for a multiplication sign, commonly used as a small cross */}
           </button>
