@@ -1,7 +1,8 @@
-console.log("starting content script...");
+console.log("🚀 Content script starting...");
 
 let posts = [];
 let filteredPosts = [];
+let lastPost = null; // { index, text }
 
 function textIncludesKeyword(rawText) {
   const normalizedText = rawText
@@ -14,7 +15,7 @@ function textIncludesKeyword(rawText) {
 const interval = setInterval(() => { // interval because  the page takes time to load.
   const parent = document.querySelector(".scaffold-finite-scroll__content");  // the main element containing all the posts
   if (parent) { 
-    console.log("Target element found:", parent);
+    console.log("✅ LinkedIn content container found - starting observer");
     clearInterval(interval); // Stop checking once found
 
     const callback = (mutationList, observer) => {
@@ -25,29 +26,54 @@ const interval = setInterval(() => { // interval because  the page takes time to
           .includes("https://www.linkedin.com/search/results/content/")
       ) // to run the content script only when current tab is of the linkedIn post search 
         setTimeout(() => {
+          console.log("🔄 DOM change detected");
           try { //for the "show more results" button so that it gets clicked automatically without being clicked manually each time.
             const showMoreButton = document.querySelector(  
               ".scaffold-finite-scroll__load-button"
             );
             if (showMoreButton) {
-              console.log("Button found:", showMoreButton);
               showMoreButton.click();
             }
           } catch (error) {
             console.log("error while finding show more button: " + error);
           }
           posts = document.querySelectorAll("li.artdeco-card"); // gets all the posts in the dom. When we scroll down to the bottom, 3 posts are added each time, each post is in a list "li" and these are all inside a div with a random class each time.
-          filteredPosts = []; 
-          posts.forEach((post, i) => {  //since posts is a NodeList with each node having a lot of data, we just need it's index and inner text.
-            const p = {
+          
+          // Handle edge case: reset lastPost if invalid
+          if (lastPost && lastPost.index >= posts.length) {
+            console.log("📍 Resetting invalid lastPost");
+            lastPost = null; // Reset if invalid
+          }
+          
+          // Find lastIndex
+          let lastIndex = -1;
+          if (lastPost && lastPost.index < posts.length) {
+            const currentText = textIncludesKeyword(posts[lastPost.index].textContent);
+            if (currentText === lastPost.text) {
+              lastIndex = lastPost.index;
+              console.log(`📍 Found lastPost at index ${lastIndex}`);
+            }
+          }
+
+          // Build newPosts (only new posts after lastIndex)
+          let newPostsToSend = [];
+          for (let i = lastIndex + 1; i < posts.length; i++) {
+            newPostsToSend.push({
               index: i,
-              text: textIncludesKeyword(post.textContent),
-            };
-            filteredPosts.push(p);
-          });
-          chrome.runtime.sendMessage({  //sends message to background script.
-            arr: filteredPosts, //sent to background script so that it can filter it and send it back.
-          });
+              text: textIncludesKeyword(posts[i].textContent)
+            });
+          }
+
+          console.log(`📊 Total posts: ${posts.length}, New posts: ${newPostsToSend.length}`);
+
+          // Only send message if there are new posts
+          if (newPostsToSend.length > 0) {
+            console.log(`📤 Sending ${newPostsToSend.length} new posts to background`);
+            chrome.runtime.sendMessage({  //sends message to background script.
+              newPosts: newPostsToSend,
+              totalPostsCount: posts.length
+            });
+          }
         }, "500");
     };
 
@@ -62,30 +88,66 @@ const interval = setInterval(() => { // interval because  the page takes time to
       sender,
       sendResponse
     ) {
-      console.log("current posts:", filteredPosts);
-      console.log("filtered by background script: ", request.filtered);
+      console.log(`📥 Received response: ${request.filtered.length} filtered posts, hasFiltersChanged: ${request.hasFiltersChanged}`);
       let arr = request.filtered; //the filtered array from background script.
-      filteredPosts = arr;
+      let hasFiltersChanged = request.hasFiltersChanged;
+      
       let i = 0;
       let postArr = Array.from(posts); //posts is a nodelist so cannot use .filter directly, need to convert it to array first.
-      //console.log(posts);
+      
       try {
-        postArr = postArr.filter((post, index = 0) => {
-          if (i >= arr.length || arr[i].index !== index) { //compares the current index of the posts array with the filtered list's current index and if not same, it removes element until the index are same or the filtered list is completely traversed.
-            posts[index].remove();
-            return false;
-          } else {
-            i++;
-            return true;
+        if (hasFiltersChanged) {
+          console.log("🔄 Processing all posts (filters changed)");
+          // Process all posts (existing logic)
+          postArr = postArr.filter((post, index) => {
+            if (i >= arr.length || arr[i].index !== index) {
+              posts[index].remove();
+              return false;
+            } else {
+              i++;
+              return true;
+            }
+          });
+        } else {
+          console.log(`🎯 Processing incremental posts from index ${lastPost ? lastPost.index + 1 : 0}`);
+          // Process only from lastIndex + 1 to end
+          let startIndex = lastPost ? lastPost.index + 1 : 0;
+          
+          for (let index = startIndex; index < postArr.length; index++) {
+            if (i >= arr.length || arr[i].index !== index) {
+              posts[index].remove();
+              postArr[index] = null; // Mark as removed
+            } else {
+              i++;
+            }
           }
-        });
-        console.log("final posts: ", postArr);
+          
+          // Clean up null entries
+          postArr = postArr.filter(post => post !== null);
+        }
+        
+        // Update lastPost
+        if (posts.length > 0) {
+          let lastIndex = posts.length - 1;
+          // Find the actual last visible post
+          while (lastIndex >= 0 && !document.contains(posts[lastIndex])) {
+            lastIndex--;
+          }
+          if (lastIndex >= 0) {
+            lastPost = {
+              index: lastIndex,
+              text: textIncludesKeyword(posts[lastIndex].textContent)
+            };
+            console.log(`📍 Updated lastPost to index ${lastIndex}`);
+          }
+        }
+        
+        console.log(`✅ Final visible posts: ${postArr.length}`);
       } catch (error) {
         console.log("error in content script onMessage: " + error);
       }
-      console.log(postArr);
     });
   } else {
-    console.log("Waiting for .scaffold-finite-scroll__content...");
+    console.log("⏳ Waiting for LinkedIn content container...");
   }
 }, 500); // Check every 500ms

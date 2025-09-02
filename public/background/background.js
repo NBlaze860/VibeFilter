@@ -1,4 +1,5 @@
-let postArr = [];
+let originalPosts = []; // Complete history of all posts
+let newPosts = []; // Latest batch only
 let includeArr = [];
 let notIncludeArr = [];
 let eitherOrArr = [];
@@ -53,52 +54,83 @@ const eitherOrFilter = (arr, tabId) => {
 };
 
 try {
+  console.log("🚀 Background script initialized");
   chrome.runtime.onMessage.addListener(function (
     request,
     sender,
     sendResponse
   ) {
     senderTabId = sender.tab ? sender.tab.id : senderTabId; //tab id of current tab
-    let tempArr = postArr;  // current posts stored in temp array that will be used by all the if conditions so that there is no need of creating separate temp for each and then merging their results.
+    
+    // Handle new posts from content script (DOM changes)
+    if (request.newPosts) {
+      console.log(`📥 Received ${request.newPosts.length} new posts`);
+      // Append new posts to originalPosts
+      originalPosts = originalPosts.concat(request.newPosts);
+      newPosts = request.newPosts; // Store latest batch
+      console.log(`📊 Total originalPosts: ${originalPosts.length}`);
+      
+      // Filter only the new posts
+      let filteredNewPosts = newPosts;
+      if (includeArr.length) filteredNewPosts = includeFilter(filteredNewPosts, senderTabId);
+      if (notIncludeArr.length) filteredNewPosts = notIncludeFilter(filteredNewPosts, senderTabId);
+      if (eitherOrArr.length) filteredNewPosts = eitherOrFilter(filteredNewPosts, senderTabId);
+      
+      console.log(`🎯 Filtered new posts: ${filteredNewPosts.length}/${newPosts.length}`);
+      
+      try {
+        if (senderTabId) {
+          chrome.tabs.sendMessage(senderTabId, {
+            filtered: filteredNewPosts,
+            hasFiltersChanged: false
+          });
+        }
+      } catch (error) {
+        console.log("error sending new posts response: " + error);
+      }
+      return false;
+    }
+    
     if (request.include) { //checks if the popup sent include filters
       let temp = request.include;
       includeArr = temp;
-      tempArr = includeFilter(tempArr, senderTabId);  //function to filter the current array for include filters
-      console.log("include:", includeArr, tempArr);
+      console.log(`🔧 Include filters updated: [${includeArr.join(', ')}]`);
     }
     if (request.notInclude) { //checks if the popup sent notInclude filters
       let temp = request.notInclude;
       notIncludeArr = temp;
-      tempArr = notIncludeFilter(tempArr, senderTabId);  //function to filter the current array for notInclude filters
-      console.log("notInclude:", notIncludeArr, tempArr);
+      console.log(`🔧 NotInclude filters updated: [${notIncludeArr.join(', ')}]`);
     }
     if (request.eitherOr) { //checks if the popup sent either or filters
       let temp = request.eitherOr;
       eitherOrArr = temp;
-      tempArr = eitherOrFilter(tempArr, senderTabId);  //function to filter the current array for eitherOr filters
-      console.log("either or:", eitherOrArr, tempArr);
+      console.log(`🔧 EitherOr filters updated: [${eitherOrArr.join(', ')}]`);
     }
-    if (request.arr) {  // checks if the content script sent new post array(it sends the array only when dom changes)
-      postArr = request.arr;  //updates the new post array
-      tempArr = postArr;
-      console.log("tempArr:", tempArr);
-      //runs all the filter functions on the updated array 
-      if (includeArr.length) tempArr = includeFilter(tempArr, senderTabId); 
+    
+    // Handle filter changes - need to re-filter all posts
+    if (request.include || request.notInclude || request.eitherOr) {
+      console.log(`🔄 Filter change detected - re-filtering all ${originalPosts.length} posts`);
+      tempArr = originalPosts.slice(); // Start with all original posts
+      if (includeArr.length) tempArr = includeFilter(tempArr, senderTabId);
       if (notIncludeArr.length) tempArr = notIncludeFilter(tempArr, senderTabId);
       if (eitherOrArr.length) tempArr = eitherOrFilter(tempArr, senderTabId);
-    }
-    try {
-      //console.log("final tempArr:", tempArr);
-      console.log(senderTabId);
-      if (senderTabId && postArr.length) {
-        console.log("ye hai postArr aur tempArr", postArr, tempArr);
-        chrome.tabs.sendMessage(senderTabId, { //sends the filtered array to the content script of that particular tab (likedIn search tab)
-          filtered: tempArr,  
-        });
+      
+      console.log(`🎯 Filter result: ${tempArr.length}/${originalPosts.length} posts passed`);
+      
+      try {
+        if (senderTabId && originalPosts.length) {
+          chrome.tabs.sendMessage(senderTabId, {
+            filtered: tempArr,
+            hasFiltersChanged: true
+          });
+        }
+      } catch (error) {
+        console.log("error sending filter change response: " + error);
       }
-    } catch (error) {
-      console.log("error in notIncludeFilter sendMessage: " + error);
+      return false;
     }
+    
+
     return false; //return true tells the browser: “Wait, I’ll respond later.” Without it, the browser thinks you're done and closes the channel too early.
     //false	Sending response immediately.	"I’ve responded. You can close the message channel now."
   });
