@@ -91,24 +91,29 @@ try {
       return false;
     }
     
-    if (request.include) { //checks if the popup sent include filters
-      let temp = request.include;
-      includeArr = temp;
-      console.log(`🔧 Include filters updated: [${includeArr.join(', ')}]`);
-    }
-    if (request.notInclude) { //checks if the popup sent notInclude filters
-      let temp = request.notInclude;
-      notIncludeArr = temp;
-      console.log(`🔧 NotInclude filters updated: [${notIncludeArr.join(', ')}]`);
-    }
-    if (request.eitherOr) { //checks if the popup sent either or filters
-      let temp = request.eitherOr;
-      eitherOrArr = temp;
-      console.log(`🔧 EitherOr filters updated: [${eitherOrArr.join(', ')}]`);
+    // Check if filters actually changed by comparing with current arrays
+    let hasFiltersActuallyChanged = false;
+    
+    if (request.include && JSON.stringify(request.include) !== JSON.stringify(includeArr)) {
+      includeArr = request.include;
+      hasFiltersActuallyChanged = true;
+      console.log(`🔧 Include filters changed: [${includeArr.join(', ')}]`);
     }
     
-    // Handle filter changes - need to re-filter all posts
-    if (request.include || request.notInclude || request.eitherOr) {
+    if (request.notInclude && JSON.stringify(request.notInclude) !== JSON.stringify(notIncludeArr)) {
+      notIncludeArr = request.notInclude;
+      hasFiltersActuallyChanged = true;
+      console.log(`🔧 NotInclude filters changed: [${notIncludeArr.join(', ')}]`);
+    }
+    
+    if (request.eitherOr && JSON.stringify(request.eitherOr) !== JSON.stringify(eitherOrArr)) {
+      eitherOrArr = request.eitherOr;
+      hasFiltersActuallyChanged = true;
+      console.log(`🔧 EitherOr filters changed: [${eitherOrArr.join(', ')}]`);
+    }
+    
+    // Only re-filter all posts if filters actually changed
+    if (hasFiltersActuallyChanged) {
       console.log(`🔄 Filter change detected - re-filtering all ${originalPosts.length} posts`);
       tempArr = originalPosts.slice(); // Start with all original posts
       if (includeArr.length) tempArr = includeFilter(tempArr, senderTabId);

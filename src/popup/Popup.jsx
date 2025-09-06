@@ -11,6 +11,9 @@ function Popup() {
   const [notIncludeFilters, setNotIncludeFilters] = useState([]);
   const [eitherOrFilters, setEitherOrFilters] = useState([]);
 
+  // Track if initial load is complete to prevent sending messages during startup
+  const [isInitialized, setIsInitialized] = useState(false);
+
   useEffect(() => { //loads filters from Chrome local storage.
     // Check if the Chrome API is available
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
@@ -24,6 +27,8 @@ function Popup() {
         if (result.eitherOrFilters) {
           setEitherOrFilters(result.eitherOrFilters);
         }
+        // Mark initialization as complete after loading all filters
+        setIsInitialized(true);
       });
     }
   }, []); // effect runs only once on initial render
@@ -31,32 +36,35 @@ function Popup() {
   // Effect to save 'includeFilters' to Chrome local storage and send a message
   // to the background script whenever the 'includeFilters' state changes.
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    // Only send messages after initialization is complete
+    if (isInitialized && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ includeFilters });
       // Send the updated list of include filters to the background script
       chrome.runtime.sendMessage({ type: 'updateFilters', include: includeFilters });
     }
-  }, [includeFilters]);
+  }, [includeFilters, isInitialized]);
 
   // Effect to save 'notIncludeFilters' to Chrome local storage and send a message
   // to the background script whenever the 'notIncludeFilters' state changes.
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    // Only send messages after initialization is complete
+    if (isInitialized && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ notIncludeFilters });
       // Send the updated list of not-include filters to the background script
       chrome.runtime.sendMessage({ type: 'updateFilters', notInclude: notIncludeFilters });
     }
-  }, [notIncludeFilters]) // This effect runs whenever 'notIncludeFilters' state changes
+  }, [notIncludeFilters, isInitialized]) // This effect runs whenever 'notIncludeFilters' state changes
 
   // Effect to save 'eitherOrFilters' to Chrome local storage and send a message
   // to the background script whenever the 'eitherOrFilters' state changes.
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    // Only send messages after initialization is complete
+    if (isInitialized && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ eitherOrFilters });
       // Send the updated list of either-or filters to the background script
       chrome.runtime.sendMessage({ type: 'updateFilters', eitherOr: eitherOrFilters });
     }
-  }, [eitherOrFilters]);
+  }, [eitherOrFilters, isInitialized]);
 
   /**
    * Adds a new filter to the specified filter list.
