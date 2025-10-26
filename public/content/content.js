@@ -27,12 +27,13 @@ const interval = setInterval(() => { // interval because  the page takes time to
       ) // to run the content script only when current tab is of the linkedIn post search 
         setTimeout(() => {
           console.log("🔄 DOM change detected");
+          
           try { //for the "show more results" button so that it gets clicked automatically without being clicked manually each time.
             const showMoreButton = document.querySelector(  
               ".scaffold-finite-scroll__load-button"
             );
             if (showMoreButton) {
-              showMoreButton.click();
+              //showMoreButton.click();
             }
           } catch (error) {
             console.log("error while finding show more button: " + error);
@@ -45,13 +46,17 @@ const interval = setInterval(() => { // interval because  the page takes time to
             lastPost = null; // Reset if invalid
           }
           
-          // Find lastIndex
+          // Find lastIndex from lastPost
           let lastIndex = -1;
           if (lastPost && lastPost.index < posts.length) {
             const currentText = textIncludesKeyword(posts[lastPost.index].textContent);
             if (currentText === lastPost.text) {
               lastIndex = lastPost.index;
               console.log(`📍 Found lastPost at index ${lastIndex}`);
+            } else {
+              // Post content changed, reset tracking
+              console.log("⚠️ Post content changed, resetting lastPost");
+              lastPost = null;
             }
           }
 
@@ -64,7 +69,7 @@ const interval = setInterval(() => { // interval because  the page takes time to
             });
           }
 
-          console.log(`📊 Total posts: ${posts.length}, New posts: ${newPostsToSend.length}`);
+          console.log(`📊 lastIndex: ${lastIndex}, Total posts: ${posts.length}, New posts: ${newPostsToSend.length}`);
 
           // Only send message if there are new posts
           if (newPostsToSend.length > 0) {
@@ -126,20 +131,26 @@ const interval = setInterval(() => { // interval because  the page takes time to
           postArr = postArr.filter(post => post !== null);
         }
         
-        // Update lastPost
+        // Update lastPost to track the last visible post
         if (posts.length > 0) {
-          let lastIndex = posts.length - 1;
-          // Find the actual last visible post
-          while (lastIndex >= 0 && !document.contains(posts[lastIndex])) {
-            lastIndex--;
+          // Find the last visible post in the DOM
+          let newLastIndex = posts.length - 1;
+          while (newLastIndex >= 0 && !document.contains(posts[newLastIndex])) {
+            newLastIndex--; // Skip removed posts
           }
-          if (lastIndex >= 0) {
+          
+          if (newLastIndex >= 0) {
             lastPost = {
-              index: lastIndex,
-              text: textIncludesKeyword(posts[lastIndex].textContent)
+              index: newLastIndex,
+              text: textIncludesKeyword(posts[newLastIndex].textContent)
             };
-            console.log(`📍 Updated lastPost to index ${lastIndex}`);
+            console.log(`📍 Updated lastPost to index ${newLastIndex}`);
+          } else {
+            // All posts were removed
+            lastPost = null;
           }
+        } else {
+          lastPost = null;
         }
         
         console.log(`✅ Final visible posts: ${postArr.length}`);
