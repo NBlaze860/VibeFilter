@@ -36,7 +36,7 @@ const interval = setInterval(() => { // interval because  the page takes time to
               //showMoreButton.click();
             }
           } catch (error) {
-            console.log("error while finding show more button: " + error);
+            console.error("[VibeFilter ERROR] Show more button failed:", error);
           }
           posts = document.querySelectorAll("li.artdeco-card"); // gets all the posts in the dom. When we scroll down to the bottom, 3 posts are added each time, each post is in a list "li" and these are all inside a div with a random class each time.
           
@@ -52,7 +52,7 @@ const interval = setInterval(() => { // interval because  the page takes time to
             const currentText = textIncludesKeyword(posts[lastPost.index].textContent);
             if (currentText === lastPost.text) {
               lastIndex = lastPost.index;
-              console.log(`📍 Found lastPost at index ${lastIndex}`);
+              console.log(`📍 Found lastPost at index ${lastIndex}, lastPost:${lastPost}`);
             } else {
               // Post content changed, reset tracking
               console.log("⚠️ Post content changed, resetting lastPost");
@@ -155,7 +155,7 @@ const interval = setInterval(() => { // interval because  the page takes time to
         
         console.log(`✅ Final visible posts: ${postArr.length}`);
       } catch (error) {
-        console.log("error in content script onMessage: " + error);
+        console.error("[VibeFilter ERROR] Post filtering failed:", error);
       }
     });
   } else {

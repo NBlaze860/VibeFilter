@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 function Popup() {
   //input fields for adding new filters
@@ -13,6 +13,9 @@ function Popup() {
 
   // Track if initial load is complete to prevent sending messages during startup
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Ref to store the debounce timer
+  const debounceTimerRef = useRef(null);
 
   useEffect(() => { //loads filters from Chrome local storage.
     // Check if the Chrome API is available
@@ -33,38 +36,37 @@ function Popup() {
     }
   }, []); // effect runs only once on initial render
 
-  // Effect to save 'includeFilters' to Chrome local storage and send a message
-  // to the background script whenever the 'includeFilters' state changes.
+  // Consolidated effect to save all filters and send a single debounced message
+  // This prevents race conditions from multiple simultaneous updates
   useEffect(() => {
     // Only send messages after initialization is complete
     if (isInitialized && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({ includeFilters });
-      // Send the updated list of include filters to the background script
-      chrome.runtime.sendMessage({ type: 'updateFilters', include: includeFilters });
+      // Save all filters to storage
+      chrome.storage.local.set({ includeFilters, notIncludeFilters, eitherOrFilters });
+      
+      // Clear existing debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      
+      // Send a single consolidated message after 300ms of no changes
+      debounceTimerRef.current = setTimeout(() => {
+        chrome.runtime.sendMessage({ 
+          type: 'updateFilters', 
+          include: includeFilters,
+          notInclude: notIncludeFilters,
+          eitherOr: eitherOrFilters
+        });
+      }, 300);
     }
-  }, [includeFilters, isInitialized]);
-
-  // Effect to save 'notIncludeFilters' to Chrome local storage and send a message
-  // to the background script whenever the 'notIncludeFilters' state changes.
-  useEffect(() => {
-    // Only send messages after initialization is complete
-    if (isInitialized && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({ notIncludeFilters });
-      // Send the updated list of not-include filters to the background script
-      chrome.runtime.sendMessage({ type: 'updateFilters', notInclude: notIncludeFilters });
-    }
-  }, [notIncludeFilters, isInitialized]) // This effect runs whenever 'notIncludeFilters' state changes
-
-  // Effect to save 'eitherOrFilters' to Chrome local storage and send a message
-  // to the background script whenever the 'eitherOrFilters' state changes.
-  useEffect(() => {
-    // Only send messages after initialization is complete
-    if (isInitialized && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({ eitherOrFilters });
-      // Send the updated list of either-or filters to the background script
-      chrome.runtime.sendMessage({ type: 'updateFilters', eitherOr: eitherOrFilters });
-    }
-  }, [eitherOrFilters, isInitialized]);
+    
+    // Cleanup function to clear timer on unmount
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [includeFilters, notIncludeFilters, eitherOrFilters, isInitialized]);
 
   /**
    * Adds a new filter to the specified filter list.
